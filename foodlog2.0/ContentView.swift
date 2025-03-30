@@ -371,23 +371,23 @@ struct PopupMenu: View {
     @Binding var showWaterLog: Bool
     @State private var opacity: Double = 0
     @State private var buttonScale: Double = 0.1
-    @State private var buttonOffset: CGSize = .zero
+    @State private var animationProgress: Double = 0
     
     // Positions for the radial menu
-    private let radius: CGFloat = 120  // Increased radius for wider spread
-    private let angles: [Double] = [180, 225, 270] // Angles for horizontal fan (180 is left, 270 is up)
+    private let radius: CGFloat = 85
+    private let angles: [Double] = [205, 270, 335] // Angles for wider fan (225° to 315° spans 90° centered at 270°)
     
-    private func position(for angle: Double) -> CGSize {
+    private func position(for angle: Double, progress: Double) -> CGSize {
         let radians = angle * .pi / 180
         return CGSize(
-            width: CGFloat(Foundation.cos(radians)) * radius,
-            height: CGFloat(Foundation.sin(radians)) * radius
+            width: CGFloat(Foundation.cos(radians)) * radius * progress,
+            height: CGFloat(Foundation.sin(radians)) * radius * progress
         )
     }
     
     var body: some View {
         ZStack {
-            // Water Button (leftmost)
+            // Water Button (left)
             Button(action: {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isShowing = false
@@ -398,8 +398,7 @@ struct PopupMenu: View {
             }) {
                 MenuButton(icon: "drop")
             }
-            .offset(buttonOffset)
-            .offset(position(for: angles[0]))
+            .offset(position(for: angles[0], progress: animationProgress))
             .scaleEffect(buttonScale)
             
             // Manual Entry Button (middle)
@@ -413,11 +412,10 @@ struct PopupMenu: View {
             }) {
                 MenuButton(icon: "square.and.pencil")
             }
-            .offset(buttonOffset)
-            .offset(position(for: angles[1]))
+            .offset(position(for: angles[1], progress: animationProgress))
             .scaleEffect(buttonScale)
             
-            // Camera Button (rightmost)
+            // Camera Button (right)
             Button(action: {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isShowing = false
@@ -428,16 +426,25 @@ struct PopupMenu: View {
             }) {
                 MenuButton(icon: "camera")
             }
-            .offset(buttonOffset)
-            .offset(position(for: angles[2]))
+            .offset(position(for: angles[2], progress: animationProgress))
             .scaleEffect(buttonScale)
         }
         .opacity(opacity)
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            // Initial state
+            opacity = 0
+            buttonScale = 0.1
+            animationProgress = 0
+            
+            // First animation: fade in and scale up
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                 opacity = 1
                 buttonScale = 1.2
-                buttonOffset = .zero
+            }
+            
+            // Second animation: fan out
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7, blendDuration: 0.3)) {
+                animationProgress = 1
             }
         }
     }
