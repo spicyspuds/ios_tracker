@@ -55,6 +55,7 @@ struct NeumorphicButton: View {
 struct WaterLogModal: View {
     @Binding var isPresented: Bool
     @State private var waterAmount: Double = 0.25
+    @EnvironmentObject var nutritionStore: NutritionStore
     let amounts = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0]
     
     var body: some View {
@@ -121,7 +122,8 @@ struct WaterLogModal: View {
                     
                     // Save Button
                     Button(action: {
-                        // Save water intake logic here
+                        let waterLog = NutritionLog.defaultWaterLog(amount: waterAmount)
+                        nutritionStore.addLog(waterLog)
                         withAnimation(.spring()) {
                             isPresented = false
                         }
@@ -159,6 +161,7 @@ struct ManualFoodLogModal: View {
     @State private var protein = ""
     @State private var carbs = ""
     @State private var fats = ""
+    @EnvironmentObject var nutritionStore: NutritionStore
     
     var body: some View {
         ZStack {
@@ -236,7 +239,14 @@ struct ManualFoodLogModal: View {
                     
                     // Save Button
                     Button(action: {
-                        // Save food log logic here
+                        var foodLog = NutritionLog.defaultFoodLog()
+                        foodLog.name = foodName
+                        foodLog.calories = Double(calories) ?? 0
+                        foodLog.protein = Double(protein) ?? 0
+                        foodLog.carbs = Double(carbs) ?? 0
+                        foodLog.fats = Double(fats) ?? 0
+                        
+                        nutritionStore.addLog(foodLog)
                         withAnimation(.spring()) {
                             isPresented = false
                         }
@@ -331,6 +341,7 @@ enum ActiveSheet: Identifiable {
 struct MenuButton: View {
     let icon: String
     @State private var isPressed = false
+    let action: () -> Void
     
     var body: some View {
         ZStack {
@@ -351,16 +362,6 @@ struct MenuButton: View {
                 .font(.system(size: 24))
                 .foregroundColor(.gray)
         }
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                isPressed = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isPressed = false
-                }
-            }
-        }
     }
 }
 
@@ -375,7 +376,7 @@ struct PopupMenu: View {
     
     // Positions for the radial menu
     private let radius: CGFloat = 85
-    private let angles: [Double] = [205, 270, 335] // Angles for wider fan (225° to 315° spans 90° centered at 270°)
+    private let angles: [Double] = [205, 270, 335]
     
     private func position(for angle: Double, progress: Double) -> CGSize {
         let radians = angle * .pi / 180
@@ -388,43 +389,43 @@ struct PopupMenu: View {
     var body: some View {
         ZStack {
             // Water Button (left)
-            Button(action: {
+            Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isShowing = false
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     showWaterLog = true
                 }
-            }) {
-                MenuButton(icon: "drop")
+            } label: {
+                MenuButton(icon: "drop") {}
             }
             .offset(position(for: angles[0], progress: animationProgress))
             .scaleEffect(buttonScale)
             
             // Manual Entry Button (middle)
-            Button(action: {
+            Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isShowing = false
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     showManualLog = true
                 }
-            }) {
-                MenuButton(icon: "square.and.pencil")
+            } label: {
+                MenuButton(icon: "square.and.pencil") {}
             }
             .offset(position(for: angles[1], progress: animationProgress))
             .scaleEffect(buttonScale)
             
             // Camera Button (right)
-            Button(action: {
+            Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isShowing = false
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     showCamera = true
                 }
-            }) {
-                MenuButton(icon: "camera")
+            } label: {
+                MenuButton(icon: "camera") {}
             }
             .offset(position(for: angles[2], progress: animationProgress))
             .scaleEffect(buttonScale)
@@ -589,6 +590,56 @@ struct ActionButton: View {
     }
 }
 
+struct WaterProgressView: View {
+    @EnvironmentObject var nutritionStore: NutritionStore
+    private let dailyGoal: Double = 2.5 // Daily water goal in liters
+    
+    private var todayWaterAmount: Double {
+        let todayLogs = nutritionStore.getLogsByDate(date: Date())
+        return todayLogs.filter { $0.type == .water }.reduce(0) { $0 + $1.waterAmount }
+    }
+    
+    private var progress: Double {
+        min(todayWaterAmount / dailyGoal, 1.0)
+    }
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Water progress bar
+            ZStack(alignment: .leading) {
+                // Background track
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(NeumorphicStyle.backgroundColor)
+                    .frame(height: 24)
+                    .shadow(color: NeumorphicStyle.shadowColor, radius: 4, x: 4, y: 4)
+                    .shadow(color: NeumorphicStyle.lightColor, radius: 4, x: -4, y: -4)
+                
+                // Water fill
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.blue.opacity(0.3))
+                    .frame(width: UIScreen.main.bounds.width * 0.7 * progress, height: 24)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.blue.opacity(0.5), lineWidth: 1)
+                    )
+            }
+            .frame(width: UIScreen.main.bounds.width * 0.7)
+            
+            // Water info
+            HStack(spacing: 4) {
+                Image(systemName: "drop.fill")
+                    .foregroundColor(.blue.opacity(0.7))
+                    .font(.system(size: 14))
+                
+                Text("\(todayWaterAmount, specifier: "%.1f")L / \(dailyGoal, specifier: "%.1f")L")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(.top, 10)
+    }
+}
+
 struct ContentView: View {
     @StateObject private var nutritionStore = NutritionStore()
     @State private var showingAddMenu = false
@@ -625,9 +676,12 @@ struct ContentView: View {
                 .tag(0)
                 
                 // Main View (current view)
-                VStack {
+                VStack(spacing: 20) {
                     MacrosPieChartView()
-                        .padding(.top, 60)  // Move it higher up
+                        .padding(.top, 60)
+                    
+                    WaterProgressView()
+                    
                     Spacer()
                 }
                 .tag(1)
@@ -727,6 +781,7 @@ struct ContentView: View {
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+            .environmentObject(NutritionStore())
             .previewDevice("iPhone 16 Pro")
     }
 }
