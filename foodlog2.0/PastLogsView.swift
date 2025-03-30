@@ -7,6 +7,7 @@ struct PastLogsView: View {
     @State private var showDatePicker = false
     @State private var selectedLogId: UUID? = nil
     @State private var isNavigatingToDetail = false
+    @Binding var selectedTab: Int
     
     var filteredLogs: [NutritionLog] {
         let dateFilteredLogs = nutritionStore.getLogsByDate(date: selectedDate)
@@ -70,6 +71,11 @@ struct PastLogsView: View {
                             )
                             .padding(.horizontal)
                             .transition(.opacity)
+                            .onChange(of: selectedDate) { oldValue, newValue in
+                                withAnimation {
+                                    showDatePicker = false
+                                }
+                            }
                     }
                     
                     // Search Bar
@@ -102,11 +108,16 @@ struct PastLogsView: View {
                         ScrollView {
                             LazyVStack(spacing: 15) {
                                 ForEach(filteredLogs) { log in
-                                    LogEntryRowView(log: log)
-                                        .onTapGesture {
-                                            selectedLogId = log.id
-                                            isNavigatingToDetail = true
-                                        }
+                                    GeometryReader { geometry in
+                                        LogEntryRowView(log: log)
+                                            .opacity(rowOpacity(for: geometry))
+                                            .offset(x: rowOffset(for: geometry))
+                                            .onTapGesture {
+                                                selectedLogId = log.id
+                                                isNavigatingToDetail = true
+                                            }
+                                    }
+                                    .frame(height: 80)
                                 }
                             }
                             .padding()
@@ -125,6 +136,42 @@ struct PastLogsView: View {
                 }
             }
         }
+    }
+    
+    private func rowOpacity(for geometry: GeometryProxy) -> Double {
+        let minY = geometry.frame(in: .global).minY
+        let maxY = geometry.frame(in: .global).maxY
+        let screenHeight = UIScreen.main.bounds.height
+        
+        // Fade out when the row is less than 20% visible at top or bottom
+        let topFadeThreshold = 100.0
+        let bottomFadeThreshold = screenHeight - 180.0
+        
+        if minY < topFadeThreshold {
+            return max(0, minY / topFadeThreshold)
+        } else if maxY > bottomFadeThreshold {
+            return max(0, (screenHeight - maxY) / (screenHeight - bottomFadeThreshold))
+        }
+        
+        return 1.0
+    }
+    
+    private func rowOffset(for geometry: GeometryProxy) -> Double {
+        let minY = geometry.frame(in: .global).minY
+        let maxY = geometry.frame(in: .global).maxY
+        let screenHeight = UIScreen.main.bounds.height
+        
+        // Slide away when the row is less than 20% visible
+        let topFadeThreshold = 100.0
+        let bottomFadeThreshold = screenHeight - 180.0
+        
+        if minY < topFadeThreshold {
+            return -30 * (1 - minY / topFadeThreshold)
+        } else if maxY > bottomFadeThreshold {
+            return 30 * (maxY - bottomFadeThreshold) / (screenHeight - bottomFadeThreshold)
+        }
+        
+        return 0
     }
     
     private var formattedDate: String {

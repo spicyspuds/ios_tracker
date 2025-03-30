@@ -640,6 +640,23 @@ struct WaterProgressView: View {
     }
 }
 
+// Add this new view before ContentView
+struct PageIndicator: View {
+    let currentPage: Int
+    let numberOfPages: Int
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<numberOfPages, id: \.self) { page in
+                Circle()
+                    .fill(page == currentPage ? Color.gray : Color.gray.opacity(0.3))
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .padding(.bottom, 20)
+    }
+}
+
 struct ContentView: View {
     @StateObject private var nutritionStore = NutritionStore()
     @State private var showingAddMenu = false
@@ -655,25 +672,9 @@ struct ContentView: View {
                 .ignoresSafeArea()
             
             TabView(selection: $selectedTab) {
-                // Past Logs View with Back Button
-                ZStack {
-                    PastLogsView()
-                    
-                    VStack {
-                        HStack {
-                            NeumorphicButton(systemName: "chevron.left", size: 24) {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    selectedTab = 1
-                                }
-                            }
-                            .padding(.leading, 20)
-                            Spacer()
-                        }
-                        .padding(.top, 20)
-                        Spacer()
-                    }
-                }
-                .tag(0)
+                // Past Logs View
+                PastLogsView(selectedTab: $selectedTab)
+                    .tag(0)
                 
                 // Main View (current view)
                 VStack(spacing: 20) {
@@ -686,27 +687,20 @@ struct ContentView: View {
                 }
                 .tag(1)
                 
-                // Account View with Back Button
-                ZStack {
-                    AccountView()
-                    
-                    VStack {
-                        HStack {
-                            NeumorphicButton(systemName: "chevron.left", size: 24) {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    selectedTab = 1
-                                }
-                            }
-                            .padding(.leading, 20)
-                            Spacer()
-                        }
-                        .padding(.top, 20)
-                        Spacer()
-                    }
-                }
-                .tag(2)
+                // Account View
+                AccountView()
+                    .tag(2)
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .animation(.easeInOut, value: selectedTab)
+            
+            // Page Indicator - Only show on side pages
+            if selectedTab != 1 {
+                VStack {
+                    Spacer()
+                    PageIndicator(currentPage: selectedTab, numberOfPages: 3)
+                }
+            }
             
             // Bottom Navigation Bar - Only show on main view
             if selectedTab == 1 {
