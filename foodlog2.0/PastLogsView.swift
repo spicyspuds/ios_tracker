@@ -205,17 +205,20 @@ struct DaySummaryView: View {
     }
     
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 16) {
             Text("Day Summary")
                 .font(.headline)
                 .foregroundColor(.gray)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
             
-            HStack(spacing: 12) {
-                SummaryItemView(value: Int(totalCalories), label: "Cal", color: .orange)
-                SummaryItemView(value: Int(totalProtein), label: "Protein", color: .blue, unit: "g")
-                SummaryItemView(value: Int(totalCarbs), label: "Carbs", color: .green, unit: "g")
-                SummaryItemView(value: Int(totalFats), label: "Fats", color: .red, unit: "g")
+            HStack(spacing: 0) {
+                MacroSummaryItem(value: Int(totalCalories), label: "cal", color: .orange)
+                MacroSummaryItem(value: Int(totalProtein), label: "p", color: .blue)
+                MacroSummaryItem(value: Int(totalCarbs), label: "c", color: .green)
+                MacroSummaryItem(value: Int(totalFats), label: "f", color: .red)
             }
+            .frame(maxWidth: .infinity)
             
             // Water summary
             HStack {
@@ -224,34 +227,36 @@ struct DaySummaryView: View {
                 Text("Water: \(totalWater, specifier: "%.2f")L")
                     .foregroundColor(.blue)
             }
-            .padding(.top, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
         }
-        .padding()
+        .padding(.vertical)
         .background(
             RoundedRectangle(cornerRadius: 15)
                 .fill(NeumorphicStyle.backgroundColor)
                 .shadow(color: NeumorphicStyle.shadowColor, radius: 8, x: 8, y: 8)
                 .shadow(color: NeumorphicStyle.lightColor, radius: 8, x: -8, y: -8)
         )
+        .padding(.horizontal)
     }
 }
 
-struct SummaryItemView: View {
+struct MacroSummaryItem: View {
     let value: Int
     let label: String
     let color: Color
-    var unit: String = ""
     
     var body: some View {
-        VStack(spacing: 5) {
-            Text("\(value)\(unit)")
-                .font(.system(size: 16, weight: .bold))
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(color)
             
             Text(label)
-                .font(.caption)
-                .foregroundColor(.gray)
+                .font(.system(size: 14))
+                .foregroundColor(.gray.opacity(0.7))
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -265,14 +270,14 @@ struct LogEntryRowView: View {
     }
     
     var body: some View {
-        HStack {
+        HStack(spacing: 16) {
             // Icon based on log type
             Image(systemName: log.type == .water ? "drop.fill" : "fork.knife")
                 .foregroundColor(log.type == .water ? .blue : .gray)
-                .font(.system(size: 24))
-                .frame(width: 40)
+                .font(.system(size: 20))
+                .frame(width: 32)
             
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(log.name)
                     .font(.headline)
                     .foregroundColor(.gray)
@@ -282,29 +287,61 @@ struct LogEntryRowView: View {
                         .font(.subheadline)
                         .foregroundColor(.blue)
                 } else {
-                    HStack {
-                        Text("Cal: \(Int(log.calories))")
-                        Text("P: \(Int(log.protein))g")
-                        Text("C: \(Int(log.carbs))g")
-                        Text("F: \(Int(log.fats))g")
+                    HStack(spacing: 8) {
+                        HStack(spacing: 1) {
+                            Text("\(Int(log.calories))")
+                                .foregroundColor(.orange)
+                                .font(.system(size: 16, weight: .medium))
+                            Text("cal")
+                                .foregroundColor(.gray.opacity(0.7))
+                                .font(.system(size: 14, weight: .regular))
+                        }
+                        
+                        HStack(spacing: 1) {
+                            Text("\(Int(log.protein))")
+                                .foregroundColor(.blue)
+                                .font(.system(size: 16, weight: .medium))
+                            Text("p")
+                                .foregroundColor(.gray.opacity(0.7))
+                                .font(.system(size: 14, weight: .regular))
+                        }
+                        
+                        HStack(spacing: 1) {
+                            Text("\(Int(log.carbs))")
+                                .foregroundColor(.green)
+                                .font(.system(size: 16, weight: .medium))
+                            Text("c")
+                                .foregroundColor(.gray.opacity(0.7))
+                                .font(.system(size: 14, weight: .regular))
+                        }
+                        
+                        HStack(spacing: 1) {
+                            Text("\(Int(log.fats))")
+                                .foregroundColor(.red)
+                                .font(.system(size: 16, weight: .medium))
+                            Text("f")
+                                .foregroundColor(.gray.opacity(0.7))
+                                .font(.system(size: 14, weight: .regular))
+                        }
                     }
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
                 }
             }
             
             Spacer()
             
-            // Time
-            Text(formattedTime)
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
-                .font(.system(size: 14))
+            HStack(spacing: 4) {
+                // Time
+                Text(formattedTime)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+                    .font(.system(size: 12))
+            }
         }
-        .padding()
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 15)
                 .fill(NeumorphicStyle.backgroundColor)
