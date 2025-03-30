@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct foodlog2_0App: App {
+    @StateObject private var nutritionStore = NutritionStore()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(nutritionStore)
         }
     }
 }
